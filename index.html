@@ -14,12 +14,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
-
     <style>
         body {
             font-family: 'Noto Sans TC', sans-serif;
-            background-color: #F2F2F7;
+            background-color: #F2F2F7; /* iOS System Gray 6 */
             -webkit-tap-highlight-color: transparent;
+            padding-bottom: 90px; /* Space for FAB and bottom nav */
+            /* iOS Safe Area Support */
             padding-top: env(safe-area-inset-top);
             padding-bottom: calc(90px + env(safe-area-inset-bottom));
         }
@@ -27,43 +28,791 @@
             background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(12px);
             border-bottom: 1px solid rgba(0,0,0,0.05);
+            /* iOS Safe Area Support for Fixed Header */
             padding-top: max(12px, env(safe-area-inset-top));
             height: calc(64px + env(safe-area-inset-top));
         }
+        
+        /* Adjust top spacing for content because header height changed */
         main {
             padding-top: calc(80px + env(safe-area-inset-top)); 
         }
+
+        /* Sticky Date Selector Adjustment */
+        .sticky-date-selector {
+            top: calc(64px + env(safe-area-inset-top));
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(0,0,0,0.02);
+        }
+        .card:active {
+            transform: scale(0.98);
+            box-shadow: 0 1px 5px rgba(0,0,0,0.02);
+        }
+        
+        /* New Timeline Styles */
+        .timeline-row {
+            display: flex;
+            align-items: stretch;
+        }
+        .time-col {
+            width: 50px;
+            flex-shrink: 0;
+            text-align: right;
+            padding-top: 18px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #8E8E93;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+        .line-col {
+            width: 32px;
+            flex-shrink: 0;
+            position: relative;
+            display: flex;
+            justify-content: center;
+        }
+        .timeline-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #E5E5EA;
+            border: 2px solid #FFFFFF;
+            box-shadow: 0 0 0 1px #D1D1D6;
+            z-index: 10;
+            margin-top: 22px; /* Align with card title */
+        }
+        .timeline-line {
+            position: absolute;
+            top: 22px;
+            bottom: -22px; /* Connect to next item */
+            width: 2px;
+            background-color: #E5E5EA;
+            z-index: 0;
+        }
+        .timeline-row:last-child .timeline-line {
+            display: none; /* Hide line for last item */
+        }
+        .content-col {
+            flex: 1;
+            padding-bottom: 24px;
+            padding-left: 8px;
+        }
+
+        /* Type Colors for Dot */
+        .dot-food { background-color: #FF3B30; box-shadow: 0 0 0 1px #FF3B30; }
+        .dot-coffee { background-color: #FF9500; box-shadow: 0 0 0 1px #FF9500; }
+        .dot-shop { background-color: #AF52DE; box-shadow: 0 0 0 1px #AF52DE; }
+        .dot-transport { background-color: #007AFF; box-shadow: 0 0 0 1px #007AFF; }
+        .dot-beauty { background-color: #FF2D55; box-shadow: 0 0 0 1px #FF2D55; }
+        .dot-stay { background-color: #5856D6; box-shadow: 0 0 0 1px #5856D6; }
+
+        /* Custom Scrollbar for Tags */
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: max(24px, calc(24px + env(safe-area-inset-bottom)));
+            right: 24px;
+            width: 60px;
+            height: 60px;
+            background-color: #FF9500; /* iOS Orange */
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(255, 149, 0, 0.4);
+            z-index: 40;
+            transition: transform 0.2s;
+            cursor: pointer; /* Force pointer */
+        }
+        .fab:active { transform: scale(0.92); }
     </style>
 </head>
+<body class="text-slate-800 selection:bg-orange-100">
 
-<body class="text-slate-800">
+    <!-- Header -->
+    <header class="glass-nav fixed top-0 w-full z-50 px-5 flex justify-between items-center">
+        <div>
+            <h1 class="text-lg font-bold tracking-tight text-slate-900">Benson's Seoul 🇰🇷</h1>
+            <p class="text-[11px] text-slate-500 font-medium tracking-wide uppercase">1/2 — 1/6｜商務考察</p>
+        </div>
+        <button onclick="toggleTransport()" class="bg-slate-100/80 active:bg-slate-200 text-slate-600 w-9 h-9 rounded-full flex items-center justify-center transition backdrop-blur-sm">
+            <i class="fas fa-plane text-sm"></i>
+        </button>
+    </header>
 
-<header class="glass-nav fixed top-0 w-full z-50 px-5 flex justify-between items-center">
-    <div>
-        <h1 class="text-lg font-bold">Benson's Seoul 🇰🇷</h1>
-        <p class="text-xs text-slate-500">1/2 — 1/6｜商務考察</p>
+    <!-- Main Content Area -->
+    <main class="px-4" id="main-content">
+        <!-- Date Selector -->
+        <div class="sticky-date-selector flex space-x-2 overflow-x-auto hide-scroll pb-2 mb-2 sticky z-30 bg-[#F2F2F7]/95 backdrop-blur-sm py-2 -mx-4 px-4 transition-all">
+            <button onclick="renderDay(1)" id="btn-day1" class="day-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold bg-slate-900 text-white shadow-md transition-all whitespace-nowrap">Day 1<br><span class="font-normal opacity-80">1/2 五</span></button>
+            <button onclick="renderDay(2)" id="btn-day2" class="day-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold bg-white text-slate-500 shadow-sm border border-slate-200/50 transition-all whitespace-nowrap">Day 2<br><span class="font-normal opacity-80">1/3 六</span></button>
+            <button onclick="renderDay(3)" id="btn-day3" class="day-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold bg-white text-slate-500 shadow-sm border border-slate-200/50 transition-all whitespace-nowrap">Day 3<br><span class="font-normal opacity-80">1/4 日</span></button>
+            <button onclick="renderDay(4)" id="btn-day4" class="day-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold bg-white text-slate-500 shadow-sm border border-slate-200/50 transition-all whitespace-nowrap">Day 4<br><span class="font-normal opacity-80">1/5 一</span></button>
+            <button onclick="renderDay(5)" id="btn-day5" class="day-btn flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold bg-white text-slate-500 shadow-sm border border-slate-200/50 transition-all whitespace-nowrap">Day 5<br><span class="font-normal opacity-80">1/6 二</span></button>
+        </div>
+
+        <!-- Summary Banner -->
+        <div class="bg-slate-900 text-white rounded-2xl p-5 mb-4 shadow-lg shadow-slate-200">
+            <div class="flex items-start space-x-4">
+                <div class="bg-white/10 w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 mt-0.5">
+                    <i class="fas fa-map-marked-alt text-orange-400"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-lg leading-tight mb-1" id="summary-title">抵達與適應</h2>
+                    <p class="text-xs text-slate-300 leading-relaxed opacity-90" id="summary-desc">弘大鰻魚補充體力 ➔ 延南洞小物與服飾巡禮</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Daily Expense Summary -->
+        <div class="mb-6 flex items-center justify-between bg-white px-5 py-3 rounded-2xl shadow-sm border border-slate-100">
+            <div class="flex items-center text-slate-500 space-x-2">
+                <i class="fas fa-chart-pie text-orange-500"></i>
+                <span class="text-xs font-bold uppercase tracking-wider">本日花費</span>
+            </div>
+            <div class="text-right">
+                <span class="block text-lg font-bold text-slate-900 tracking-tight" id="daily-total-display">₩0</span>
+                <span class="block text-[10px] text-slate-400 font-medium" id="daily-total-twd">約 NT$0</span>
+            </div>
+        </div>
+
+        <!-- Timeline Container -->
+        <div id="timeline-container" class="space-y-0">
+            <!-- JavaScript 封鎖時的提示 -->
+            <div class="p-8 text-center bg-white rounded-2xl border border-red-100 shadow-sm">
+                <i class="fas fa-exclamation-circle text-red-500 text-3xl mb-3"></i>
+                <h3 class="font-bold text-slate-800 mb-2">行程載入中...</h3>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    如果您看到這個畫面很久：<br>
+                    1. 請確認手機已連上網路。<br>
+                    2. 您的瀏覽器可能封鎖了程式執行。<br>
+                    <span class="font-bold text-red-500 block mt-2">請改用「Safari」或「Chrome」瀏覽器開啟此檔案。</span>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Bottom spacing -->
+        <div class="h-8"></div>
+    </main>
+
+    <!-- FAB: Open Expense Modal -->
+    <button onclick="openExpenseModal()" class="fab">
+        <i class="fas fa-plus text-xl"></i>
+    </button>
+
+    <!-- Transport Modal -->
+    <div id="transport-modal" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[60] hidden flex items-end sm:items-center justify-center transition-all duration-300 opacity-0">
+        <div class="bg-white w-full sm:w-96 rounded-t-3xl sm:rounded-3xl p-6 h-[80vh] sm:h-auto overflow-y-auto transform transition-transform translate-y-full sm:translate-y-0 shadow-2xl" id="transport-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-900">✈️ 機場交通攻略</h2>
+                <button onclick="toggleTransport()" class="bg-slate-100 p-2 rounded-full w-8 h-8 flex items-center justify-center text-slate-400 hover:bg-slate-200"><i class="fas fa-times"></i></button>
+            </div>
+            <!-- Tabs -->
+            <div class="flex bg-slate-100 p-1 rounded-xl mb-6">
+                <button onclick="showTransport('arrival')" class="flex-1 py-2 rounded-lg text-xs font-bold bg-white shadow-sm text-slate-900 transition" id="tab-arrival">去程 (機場→弘大)</button>
+                <button onclick="showTransport('departure')" class="flex-1 py-2 rounded-lg text-xs font-bold text-slate-400 transition" id="tab-departure">回程 (弘大→機場)</button>
+            </div>
+            <!-- Content -->
+            <div id="content-arrival">
+                <div class="bg-blue-50/80 p-4 rounded-2xl border border-blue-100 mb-4">
+                    <div class="flex items-center mb-2 text-blue-700 font-bold text-sm"><i class="fas fa-subway mr-2"></i> 推薦：AREX 機場快線</div>
+                    <p class="text-xs text-blue-900/70 mb-2 leading-relaxed">週五下午易塞車，地鐵最穩。您住宿就在弘大站樓上，出站即達。</p>
+                    <div class="flex gap-2 mt-3">
+                        <span class="px-2 py-1 bg-white rounded text-[10px] font-bold text-blue-600 border border-blue-100">藍色列車</span>
+                        <span class="px-2 py-1 bg-white rounded text-[10px] font-bold text-blue-600 border border-blue-100">約 50 分鐘</span>
+                    </div>
+                </div>
+                 <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <div class="flex items-center mb-2 text-slate-700 font-bold text-sm"><i class="fas fa-bus mr-2"></i> 備選：機場巴士 6002</div>
+                    <p class="text-xs text-slate-500 mb-2 leading-relaxed">不想推行李可選。在 5B 或 11B 月台搭乘。</p>
+                </div>
+            </div>
+            <div id="content-departure" class="hidden">
+                <div class="bg-orange-50/80 p-4 rounded-2xl border border-orange-100 mb-4">
+                    <div class="flex items-center mb-2 text-orange-700 font-bold text-sm"><i class="fas fa-exclamation-circle mr-2"></i> 請提早 3.5 小時</div>
+                    <p class="text-xs text-orange-900/70 leading-relaxed">週二可能有下班車潮，強烈建議搭乘 AREX。請至弘大入口站 B3/B4 層搭車。</p>
+                </div>
+            </div>
+        </div>
     </div>
-</header>
 
-<main class="px-4">
-    <div class="bg-slate-900 text-white rounded-2xl p-6 mt-4">
-        <h2 class="text-xl font-bold mb-2">Seoul Trip Planner</h2>
-        <p class="text-sm opacity-80">
-            這是 Benson 的首爾行程整合頁<br>
-            已成功部署為可用網址
-        </p>
+    <!-- Expense Modal -->
+    <div id="expense-modal" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[70] hidden flex items-end sm:items-center justify-center transition-all duration-300 opacity-0">
+        <div class="bg-white w-full sm:w-96 rounded-t-3xl sm:rounded-3xl h-[90vh] sm:h-[800px] overflow-hidden flex flex-col transform transition-transform translate-y-full sm:translate-y-0 shadow-2xl" id="expense-content">
+            <!-- Modal Header -->
+            <div class="p-6 pb-2 flex justify-between items-center flex-shrink-0">
+                <h2 class="text-xl font-bold text-slate-900" id="expense-title">記帳助手</h2>
+                <button onclick="closeExpenseModal()" class="bg-slate-100 p-2 rounded-full w-8 h-8 flex items-center justify-center text-slate-400 hover:bg-slate-200"><i class="fas fa-times"></i></button>
+            </div>
+
+            <!-- Total Overview -->
+            <div class="px-6 pb-6 flex-shrink-0">
+                <div class="bg-slate-900 text-white p-5 rounded-2xl shadow-lg shadow-slate-200 mt-2">
+                    <p class="text-xs text-slate-400 mb-1 font-medium tracking-wide">總行程累計花費</p>
+                    <div class="flex items-baseline space-x-2">
+                        <span class="text-3xl font-bold tracking-tight" id="grand-total">₩0</span>
+                        <span class="text-sm text-slate-400" id="grand-total-twd">≈ NT$0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Form -->
+            <div class="px-6 pb-2 space-y-4 flex-shrink-0 border-b border-slate-100 mb-2">
+                <!-- Amount Input with Camera -->
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">金額 (KRW)</label>
+                    <div class="flex space-x-2">
+                        <input type="number" id="expense-amount" placeholder="0" class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xl font-bold outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition text-slate-800 placeholder:text-slate-300">
+                        <button onclick="triggerCamera()" class="bg-slate-100 text-slate-600 w-14 rounded-2xl border border-slate-200 hover:bg-slate-200 active:bg-slate-300 transition flex flex-col items-center justify-center">
+                            <i class="fas fa-camera text-lg mb-0.5"></i>
+                        </button>
+                        <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleImageUpload(this)">
+                    </div>
+                    <p class="text-xs text-orange-500 mt-2 hidden font-medium flex items-center" id="scan-status"><i class="fas fa-circle-notch fa-spin mr-2"></i> 正在分析收據...</p>
+                </div>
+
+                <!-- Description & Category -->
+                <div class="flex space-x-2">
+                    <div class="flex-1">
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">項目</label>
+                        <input type="text" id="expense-desc" placeholder="例如：午餐" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-medium outline-none focus:border-orange-500 transition">
+                    </div>
+                    <div class="w-[35%]">
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">分類</label>
+                        <div class="relative">
+                            <select id="expense-cat" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3 text-sm font-medium outline-none focus:border-orange-500 transition appearance-none">
+                                <option value="food">飲食</option>
+                                <option value="shop">購物</option>
+                                <option value="transport">交通</option>
+                                <option value="beauty">醫美</option>
+                                <option value="stay">住宿</option>
+                                <option value="coffee">咖啡</option>
+                            </select>
+                            <div class="absolute right-3 top-3.5 pointer-events-none text-slate-400"><i class="fas fa-chevron-down text-xs"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex space-x-2 mb-4">
+                     <button id="btn-cancel-edit" onclick="cancelEdit()" class="hidden w-1/3 bg-slate-100 text-slate-500 font-bold py-3.5 rounded-2xl transition">
+                        取消
+                    </button>
+                    <button id="btn-submit-expense" onclick="handleExpenseSubmit()" class="flex-1 bg-orange-500 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-orange-500/30 active:scale-[0.98] transition">
+                        新增紀錄
+                    </button>
+                </div>
+            </div>
+
+            <!-- Expense List -->
+            <div class="flex-1 overflow-y-auto px-6 pb-6 pt-2 bg-slate-50/50">
+                <h3 class="text-[10px] font-bold text-slate-400 mb-3 uppercase tracking-wider sticky top-0 bg-slate-50/95 py-2 backdrop-blur-sm">最近 10 筆紀錄</h3>
+                <div id="expense-list" class="space-y-3">
+                    <!-- Items go here -->
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="bg-white rounded-2xl p-6 mt-4 shadow-sm">
-        <h3 class="font-bold mb-2">🎉 成功啦</h3>
-        <p class="text-sm text-slate-600 leading-relaxed">
-            如果你看到這個畫面<br>
-            代表 GitHub Pages 已正常運作<br><br>
-            接下來只要開啟網址<br>
-            用 Safari 加到主畫面即可
-        </p>
-    </div>
-</main>
+    <!-- JavaScript Data & Logic -->
+    <script>
+        const naverSearch = (query) => `https://m.map.naver.com/search2/search.naver?query=${encodeURIComponent(query)}`;
 
+        const itineraryData = {
+            1: {
+                title: "抵達與適應",
+                desc: "弘大鰻魚補元氣 ➔ 延南洞質感購物",
+                items: [
+                    { time: "15:00", title: "抵達仁川機場 (ICN)", desc: "入境後請先至便利商店購買/儲值 T-Money 卡。", icon: "fa-plane-arrival", type: "transport" },
+                    { 
+                        time: "16:30", title: "前往飯店", desc: "Mercure / L7 弘大 (Yanghwa-ro 156)。\n推薦搭乘 AREX 機場快線至弘大入口站。", icon: "fa-hotel", type: "stay", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Seoul+Mapo-gu+Yanghwa-ro+156",
+                        naver: naverSearch("서울 마포구 양화로 156")
+                    },
+                    { 
+                        time: "17:30", title: "換錢 & 晚餐：風川鰻魚", desc: "先在弘大換錢，再吃炭烤鰻魚補身體。", icon: "fa-money-bill-wave", type: "food", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Pungcheon+Eel+Yeonnam",
+                        naver: naverSearch("풍천장어 연남")
+                    },
+                    { 
+                        time: "19:30", title: "Coffee Nap Roasters", desc: "【考察】紅磚設計風格，氛圍安靜。", icon: "fa-coffee", type: "coffee", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Coffee+Nap+Roasters+Yeonnam",
+                        naver: naverSearch("커피냅로스터스 연남")
+                    },
+                    { 
+                        time: "20:30", title: "購物站 1：Object", desc: "【文創】整棟的文青選物，包裝設計值得參考。", icon: "fa-shopping-bag", type: "shop", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Object+Seogyo",
+                        naver: naverSearch("오브젝트 서교")
+                    },
+                    { 
+                        time: "21:00", title: "購物站 2：M Playground", desc: "【服飾】平價流行款，買便宜衛衣/襪子。", icon: "fa-tshirt", type: "shop", 
+                        google: "https://www.google.com/maps/search/?api=1&query=M+Playground+Hongdae",
+                        naver: naverSearch("엠플레이그라운드 홍대")
+                    },
+                    { 
+                        time: "21:30", title: "購物站 3：時空間 & Musinsa", desc: "時空間看飾品牆 ➔ Musinsa 買質感西裝褲/素T (就在飯店旁)。", icon: "fa-gem", type: "shop", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Musinsa+Standard+Hongdae",
+                        naver: naverSearch("무신사 스탠다드 홍대")
+                    }
+                ]
+            },
+            2: {
+                title: "傳統與現代美學",
+                desc: "安國韓屋咖啡 ➔ 北村香氛 ➔ GM 墨鏡",
+                items: [
+                    { 
+                        time: "09:30", title: "Cafe Onion Anguk", desc: "【考察】必訪韓屋咖啡，觀察麵包動線。", icon: "fa-coffee", type: "coffee", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Cafe+Onion+Anguk",
+                        naver: naverSearch("어니언 안국")
+                    },
+                    { 
+                        time: "12:00", title: "午餐：鐘路雞林", desc: "蒜蓉辣雞湯，順路又暖胃。", icon: "fa-utensils", type: "food", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Jongno+Gyerim",
+                        naver: naverSearch("종로계림닭도리탕원조")
+                    },
+                    { 
+                        time: "14:00", title: "北村購物：Granhand & Tamburins", desc: "Granhand 買手工香氛(可刻字)，Tamburins 買貝殼護手霜。", icon: "fa-spray-can", type: "shop", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Granhand+Bukchon",
+                        naver: naverSearch("그랑핸드 북촌")
+                    },
+                    { 
+                        time: "15:30", title: "Gentle Monster", desc: "北村分店，試戴墨鏡。", icon: "fa-glasses", type: "shop", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Gentle+Monster+Bukchon",
+                        naver: naverSearch("젠틀몬스터 북촌")
+                    },
+                    { time: "18:00", title: "朋友聚餐", desc: "地點：光化門附近。", icon: "fa-user-friends", type: "food" }
+                ]
+            },
+            3: {
+                title: "望遠洞與弘大潮流",
+                desc: "市場美食 ➔ 弘大潮牌旗艦店 ➔ 水芹菜烤肉",
+                items: [
+                    { 
+                        time: "10:30", title: "Anthracite Coffee 西橋店", desc: "【考察】庭院別墅風，極靜氛圍 (離望遠近)。", icon: "fa-coffee", type: "coffee", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Anthracite+Seogyo",
+                        naver: naverSearch("앤트러사이트 서교")
+                    },
+                    { 
+                        time: "12:00", title: "午餐：望遠市場", desc: "炸辣椒、可樂餅、刀削麵。", icon: "fa-utensils", type: "food", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Mangwon+Market",
+                        naver: naverSearch("망원시장")
+                    },
+                    { 
+                        time: "13:30", title: "望遠購物：Warm Grey Tail", desc: "【小物】可愛插畫海報、玻璃杯。", icon: "fa-shopping-basket", type: "shop", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Warm+Grey+Tail",
+                        naver: naverSearch("웜그레이테일")
+                    },
+                    { 
+                        time: "15:00", title: "弘大購物：Marithe & Covernat", desc: "【潮牌】Marithe (Logo T/貝雷帽)、Covernat (美式休閒)。", icon: "fa-tshirt", type: "shop", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Marithe+Francois+Girbaud+Hongdae",
+                        naver: naverSearch("마리떼 홍대")
+                    },
+                    { 
+                        time: "17:30", title: "晚餐：滿浦水芹菜五花肉", desc: "弘大店，避開 19:00 高峰。", icon: "fa-fire", type: "food", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Mokgumung+Hongdae",
+                        naver: naverSearch("목구멍 홍대")
+                    }
+                ]
+            },
+            4: {
+                title: "沈澱與變美",
+                desc: "工業風咖啡 ➔ 百貨採購 ➔ 醫美",
+                items: [
+                    { 
+                        time: "10:00", title: "Anthracite Hapjeong", desc: "【考察】鞋廠改建工業風，輸送帶咖啡桌。", icon: "fa-coffee", type: "coffee", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Anthracite+Hapjeong",
+                        naver: naverSearch("앤트러사이트 합정")
+                    },
+                    { 
+                        time: "12:00", title: "新世界百貨 & Olive Young", desc: "前往明洞旗艦店採購精品與術後保養品。", icon: "fa-shopping-bag", type: "shop", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Shinsegae+Department+Store+Main",
+                        naver: naverSearch("신세계백화점 본점")
+                    },
+                    { time: "16:00", title: "回弘大整理", desc: "放戰利品，準備前往診所。", icon: "fa-suitcase", type: "stay" },
+                    { 
+                        time: "17:00", title: "醫美：LOVAE Clinic", desc: "請確認預約分店位置 (預設搜尋 LOVAE)。", icon: "fa-hospital-user", type: "beauty",
+                        google: "https://www.google.com/maps/search/?api=1&query=LOVAE+Clinic+Seoul",
+                        naver: naverSearch("로베의원") 
+                    },
+                    { 
+                        time: "19:00", title: "晚餐：本粥 Bonjuk", desc: "術後建議吃清淡。", icon: "fa-bowl-rice", type: "food", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Bonjuk+Hongdae",
+                        naver: naverSearch("본죽 홍대")
+                    }
+                ]
+            },
+            5: {
+                title: "回程日",
+                desc: "羊咩咩咖啡 ➔ 前往機場",
+                items: [
+                    { 
+                        time: "10:30", title: "Thanks Nature Cafe", desc: "【放鬆】弘大羊咖啡，輕鬆不趕路。", icon: "fa-coffee", type: "coffee", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Thanks+Nature+Cafe",
+                        naver: naverSearch("땡스네이쳐카페")
+                    },
+                    { 
+                        time: "12:00", title: "午餐：弘大商圈", desc: "神仙雪濃湯 或 香港飯店0410。", icon: "fa-utensils", type: "food", 
+                        google: "https://www.google.com/maps/search/?api=1&query=Sinseon+Seolleongtang+Hongdae",
+                        naver: naverSearch("신선설농탕 홍대")
+                    },
+                    { time: "14:00", title: "前往機場", desc: "建議搭乘 AREX 以免塞車。請預留 3.5 小時。", icon: "fa-plane-departure", type: "transport" }
+                ]
+            }
+        };
+
+        let currentDay = 1;
+
+        function renderDay(day) {
+            currentDay = day;
+            
+            // Buttons UI
+            document.querySelectorAll('.day-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-900', 'text-white', 'shadow-md');
+                btn.classList.add('bg-white', 'text-slate-500', 'shadow-sm');
+            });
+            const activeBtn = document.getElementById(`btn-day${day}`);
+            activeBtn.classList.remove('bg-white', 'text-slate-500', 'shadow-sm');
+            activeBtn.classList.add('bg-slate-900', 'text-white', 'shadow-md');
+
+            // Summary UI
+            const data = itineraryData[day];
+            document.getElementById('summary-title').innerText = data.title;
+            document.getElementById('summary-desc').innerText = data.desc;
+
+            // Render Timeline (New 3-Column Layout)
+            const container = document.getElementById('timeline-container');
+            container.innerHTML = '';
+            
+            data.items.forEach((item, index) => {
+                // Dot Color
+                let dotClass = "dot-other";
+                if(item.type === 'food') dotClass = "dot-food";
+                if(item.type === 'coffee') dotClass = "dot-coffee";
+                if(item.type === 'shop') dotClass = "dot-shop";
+                if(item.type === 'transport') dotClass = "dot-transport";
+                if(item.type === 'beauty') dotClass = "dot-beauty";
+                if(item.type === 'stay') dotClass = "dot-stay";
+
+                let buttonsHtml = '';
+                if (item.google || item.naver) {
+                    buttonsHtml = `<div class="mt-4 flex gap-2">`;
+                    if (item.google) {
+                        buttonsHtml += `
+                        <a href="${item.google}" target="_blank" class="flex-1 inline-flex items-center justify-center px-3 py-2 bg-slate-50 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-100 border border-slate-200 transition">
+                            <i class="fab fa-google mr-1.5"></i> Maps
+                        </a>`;
+                    }
+                    if (item.naver) {
+                        buttonsHtml += `
+                        <a href="${item.naver}" target="_blank" class="flex-1 inline-flex items-center justify-center px-3 py-2 bg-[#03C75A] text-white text-xs font-bold rounded-lg hover:bg-[#02b351] shadow-sm shadow-green-200 transition">
+                            <span class="font-black mr-1.5">N</span> Map
+                        </a>`;
+                    }
+                    buttonsHtml += `</div>`;
+                }
+
+                const html = `
+                <div class="timeline-row">
+                    <!-- Col 1: Time -->
+                    <div class="time-col">
+                        ${item.time}
+                    </div>
+
+                    <!-- Col 2: Line & Dot -->
+                    <div class="line-col">
+                        <div class="timeline-line"></div>
+                        <div class="timeline-dot ${dotClass}"></div>
+                    </div>
+
+                    <!-- Col 3: Content -->
+                    <div class="content-col">
+                        <div class="card p-4">
+                            <div class="flex items-center justify-between mb-1">
+                                <h3 class="font-bold text-slate-800 text-base leading-tight">${item.title}</h3>
+                                <div class="text-slate-300">
+                                    <i class="fas ${item.icon} text-sm"></i>
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-500 leading-relaxed whitespace-pre-line mt-1">${item.desc}</p>
+                            ${buttonsHtml}
+                        </div>
+                    </div>
+                </div>`;
+                
+                container.innerHTML += html;
+            });
+
+            updateDailyExpenseSummary(day);
+        }
+
+        // --- TRANSPORT MODAL ---
+        const modal = document.getElementById('transport-modal');
+        const modalContent = document.getElementById('transport-content');
+
+        function toggleTransport() {
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    modalContent.classList.remove('translate-y-full');
+                }, 10);
+            } else {
+                modal.classList.add('opacity-0');
+                modalContent.classList.add('translate-y-full');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+            }
+        }
+
+        function showTransport(type) {
+            const arrTab = document.getElementById('tab-arrival');
+            const depTab = document.getElementById('tab-departure');
+            const arrContent = document.getElementById('content-arrival');
+            const depContent = document.getElementById('content-departure');
+
+            if (type === 'arrival') {
+                arrTab.classList.replace('text-slate-400', 'text-slate-900');
+                arrTab.classList.add('bg-white', 'shadow-sm');
+                depTab.classList.replace('text-slate-900', 'text-slate-400');
+                depTab.classList.remove('bg-white', 'shadow-sm');
+                
+                arrContent.classList.remove('hidden');
+                depContent.classList.add('hidden');
+            } else {
+                depTab.classList.replace('text-slate-400', 'text-slate-900');
+                depTab.classList.add('bg-white', 'shadow-sm');
+                arrTab.classList.replace('text-slate-900', 'text-slate-400');
+                arrTab.classList.remove('bg-white', 'shadow-sm');
+
+                depContent.classList.remove('hidden');
+                arrContent.classList.add('hidden');
+            }
+        }
+
+        // --- EXPENSE LOGIC ---
+        let expenses = JSON.parse(localStorage.getItem('benson_expenses')) || [];
+        const TWD_RATE = 0.024;
+        let editingId = null; // Track which expense is being edited
+
+        function formatCurrency(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        function saveExpenses() {
+            localStorage.setItem('benson_expenses', JSON.stringify(expenses));
+            updateExpenseUI();
+            updateDailyExpenseSummary(currentDay);
+        }
+
+        // Renamed and Refactored: Handles both Add and Update
+        function handleExpenseSubmit() {
+            const amountInput = document.getElementById('expense-amount');
+            const descInput = document.getElementById('expense-desc');
+            const catInput = document.getElementById('expense-cat');
+            
+            const amount = parseInt(amountInput.value);
+            const desc = descInput.value || "未分類支出";
+            const category = catInput.value;
+
+            if (!amount || amount <= 0) {
+                alert("請輸入有效的金額！");
+                return;
+            }
+
+            if (editingId) {
+                // Update existing
+                const index = expenses.findIndex(e => e.id === editingId);
+                if (index !== -1) {
+                    expenses[index].amount = amount;
+                    expenses[index].desc = desc;
+                    expenses[index].category = category;
+                }
+                editingId = null; // Reset
+            } else {
+                // Add new
+                const newExpense = {
+                    id: Date.now(),
+                    day: currentDay,
+                    date: new Date().toISOString(),
+                    amount: amount,
+                    desc: desc,
+                    category: category
+                };
+                expenses.unshift(newExpense);
+            }
+
+            saveExpenses();
+            resetForm();
+        }
+        
+        // Start Edit Mode
+        function startEdit(id) {
+            const expense = expenses.find(e => e.id === id);
+            if(!expense) return;
+
+            editingId = id;
+            
+            // Fill Form
+            document.getElementById('expense-amount').value = expense.amount;
+            document.getElementById('expense-desc').value = expense.desc;
+            document.getElementById('expense-cat').value = expense.category;
+
+            // Change UI State
+            document.getElementById('expense-title').innerText = "修改紀錄";
+            document.getElementById('btn-submit-expense').innerText = "儲存修改";
+            document.getElementById('btn-submit-expense').classList.remove('bg-orange-500', 'shadow-orange-500/30');
+            document.getElementById('btn-submit-expense').classList.add('bg-blue-600', 'shadow-blue-600/30');
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+        }
+
+        // Cancel Edit Mode
+        function cancelEdit() {
+            editingId = null;
+            resetForm();
+        }
+
+        function resetForm() {
+            document.getElementById('expense-amount').value = '';
+            document.getElementById('expense-desc').value = '';
+            // Reset UI State
+            document.getElementById('expense-title').innerText = "記帳助手";
+            document.getElementById('btn-submit-expense').innerText = "新增紀錄";
+            document.getElementById('btn-submit-expense').classList.add('bg-orange-500', 'shadow-orange-500/30');
+            document.getElementById('btn-submit-expense').classList.remove('bg-blue-600', 'shadow-blue-600/30');
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+            editingId = null;
+        }
+
+        function deleteExpense(id) {
+            if(confirm("確定要刪除這筆紀錄嗎？")) {
+                expenses = expenses.filter(e => e.id !== id);
+                if (editingId === id) cancelEdit();
+                saveExpenses();
+            }
+        }
+
+        function updateExpenseUI() {
+            const listEl = document.getElementById('expense-list');
+            const grandTotalEl = document.getElementById('grand-total');
+            const grandTotalTwdEl = document.getElementById('grand-total-twd');
+
+            // Calculate Totals
+            const totalKRW = expenses.reduce((sum, item) => sum + item.amount, 0);
+            grandTotalEl.innerText = `₩${formatCurrency(totalKRW)}`;
+            grandTotalTwdEl.innerText = `≈ NT$${formatCurrency(Math.round(totalKRW * TWD_RATE))}`;
+
+            // Render List
+            listEl.innerHTML = '';
+            if (expenses.length === 0) {
+                listEl.innerHTML = '<div class="text-center text-slate-400 py-8 text-xs">尚無紀錄<br>點擊上方按鈕新增</div>';
+                return;
+            }
+
+            expenses.slice(0, 10).forEach(item => {
+                let catIcon = 'fa-tag';
+                let bgClass = 'bg-slate-100 text-slate-500';
+
+                if(item.category === 'food') { catIcon = 'fa-utensils'; bgClass = 'bg-red-100 text-red-500'; }
+                if(item.category === 'coffee') { catIcon = 'fa-coffee'; bgClass = 'bg-orange-100 text-orange-500'; }
+                if(item.category === 'shop') { catIcon = 'fa-shopping-bag'; bgClass = 'bg-purple-100 text-purple-500'; }
+                if(item.category === 'transport') { catIcon = 'fa-bus'; bgClass = 'bg-blue-100 text-blue-500'; }
+                if(item.category === 'beauty') { catIcon = 'fa-star'; bgClass = 'bg-pink-100 text-pink-500'; }
+                if(item.category === 'stay') { catIcon = 'fa-bed'; bgClass = 'bg-indigo-100 text-indigo-500'; }
+                
+                const html = `
+                <div class="flex items-center justify-between bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center ${bgClass}">
+                            <i class="fas ${catIcon} text-xs"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-700 text-sm leading-tight">${item.desc}</p>
+                            <p class="text-[10px] text-slate-400">Day ${item.day} • ${new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-slate-900 text-sm mb-1">₩${formatCurrency(item.amount)}</p>
+                        <div class="flex justify-end space-x-2">
+                             <button onclick="startEdit(${item.id})" class="text-slate-300 hover:text-blue-500 p-1 transition"><i class="fas fa-pen text-xs"></i></button>
+                             <button onclick="deleteExpense(${item.id})" class="text-slate-300 hover:text-red-500 p-1 transition"><i class="fas fa-trash-alt text-xs"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+                listEl.innerHTML += html;
+            });
+        }
+
+        function updateDailyExpenseSummary(day) {
+            const dailyTotalEl = document.getElementById('daily-total-display');
+            const dailyTotalTwdEl = document.getElementById('daily-total-twd');
+            
+            const dailyExpenses = expenses.filter(e => e.day === day);
+            const dailyTotal = dailyExpenses.reduce((sum, e) => sum + e.amount, 0);
+            
+            dailyTotalEl.innerText = `₩${formatCurrency(dailyTotal)}`;
+            dailyTotalTwdEl.innerText = `約 NT$${formatCurrency(Math.round(dailyTotal * TWD_RATE))}`;
+        }
+
+        // --- EXPENSE MODAL ---
+        const expModal = document.getElementById('expense-modal');
+        const expContent = document.getElementById('expense-content');
+
+        function openExpenseModal() {
+            updateExpenseUI();
+            expModal.classList.remove('hidden');
+            setTimeout(() => {
+                expModal.classList.remove('opacity-0');
+                expContent.classList.remove('translate-y-full');
+            }, 10);
+        }
+
+        function closeExpenseModal() {
+            if (editingId) cancelEdit();
+            
+            expModal.classList.add('opacity-0');
+            expContent.classList.add('translate-y-full');
+            setTimeout(() => {
+                expModal.classList.add('hidden');
+            }, 300);
+        }
+
+        // --- CAMERA SIMULATION ---
+        function triggerCamera() {
+            document.getElementById('camera-input').click();
+        }
+
+        function handleImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const statusEl = document.getElementById('scan-status');
+                const amountInput = document.getElementById('expense-amount');
+                
+                statusEl.classList.remove('hidden');
+                
+                // Simulate delay
+                setTimeout(() => {
+                    const mockAmount = Math.floor(Math.random() * 40000) + 5000;
+                    amountInput.value = mockAmount;
+                    statusEl.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-2"></i> 辨識成功！';
+                    setTimeout(() => {
+                        statusEl.classList.add('hidden');
+                        statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> 正在分析收據...';
+                    }, 2000);
+                }, 1500);
+            }
+        }
+
+        // Initialize
+        renderDay(1);
+    </script>
 </body>
 </html>
