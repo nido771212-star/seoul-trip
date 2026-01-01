@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- iOS Web App Config -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Benson Seoul">
+    <meta name="theme-color" content="#F2F2F7">
+
+    <title>Benson's Seoul Trip</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #F2F2F7;
+            -webkit-tap-highlight-color: transparent;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: calc(90px + env(safe-area-inset-bottom));
+        }
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding-top: max(12px, env(safe-area-inset-top));
+            height: calc(64px + env(safe-area-inset-top));
+        }
+        main {
+            padding-top: calc(80px + env(safe-area-inset-top)); 
+        }
+    </style>
+</head>
+
+<body class="text-slate-800">
+
+<header class="glass-nav fixed top-0 w-full z-50 px-5 flex justify-between items-center">
+    <div>
+        <h1 class="text-lg font-bold">Benson's Seoul 🇰🇷</h1>
+        <p class="text-xs text-slate-500">1/2 — 1/6｜商務考察</p>
+    </div>
+</header>
+
+<main class="px-4">
+    <div class="bg-slate-900 text-white rounded-2xl p-6 mt-4">
+        <h2 class="text-xl font-bold mb-2">Seoul Trip Planner</h2>
+        <p class="text-sm opacity-80">
+            這是 Benson 的首爾行程整合頁<br>
+            已成功部署為可用網址
+        </p>
+    </div>
+
+    <div class="bg-white rounded-2xl p-6 mt-4 shadow-sm">
+        <h3 class="font-bold mb-2">🎉 成功啦</h3>
+        <p class="text-sm text-slate-600 leading-relaxed">
+            如果你看到這個畫面<br>
+            代表 GitHub Pages 已正常運作<br><br>
+            接下來只要開啟網址<br>
+            用 Safari 加到主畫面即可
+        </p>
+    </div>
+</main>
+
+</body>
+</html>
